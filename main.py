@@ -78,7 +78,7 @@ def sort(xs):
 
     value_in_xs = [Or([ns[i] == xs[j] for i in range(n)]) for j in range(n)]
 
-    value_between_l_r = [ns[i] <= ns[i + 1] for i in range(n - 1)]
+    value_between = [ns[i] <= ns[i + 1] for i in range(n - 1)]
 
     same_duplicates = [
         Sum([If(xs[i] == ns[j], 1, 0) for j in range(n)]) == Sum([If(xs[i] == xs[j], 1, 0) for j in range(n)]) for i in
@@ -86,7 +86,7 @@ def sort(xs):
 
     s.add(same_duplicates)
     s.add(value_in_xs)
-    s.add(value_between_l_r)
+    s.add(value_between)
 
     if s.check() == sat:
         m = s.model()
@@ -102,34 +102,54 @@ def wp(xs):
     """
     n = len(xs)
     s = Optimize()
-    ns = [Bool(f"ns[{i}]") for i in range(n)]
+    l, r = Ints("l r")
 
-    edge_valleys = [If(xs[0] < xs[1], True, False), If(xs[n - 1] < xs[n - 2], True, False)]
-    valleys = [If(And(xs[i] < xs[i - 1], xs[i] < xs[i + 1]), True, False) for i in range(1, n - 1)]
-    print([edge_valleys[0]] + valleys + [edge_valleys[1]])
+    basics = [0 <= l, l < r, r < n]
 
+    main = [Implies(And(l <= i, r >= i), Or(xs[i] > xs[i + 1], xs[i] > xs[i - 1])) for i in range(n - 1)]
 
-    maximizer = [Sum([ns[i] for i in range(n)])]
-
-    s.
+    s.add(basics)
+    s.add(main)
+    s.maximize(r - l)
 
     if s.check() == sat:
         m = s.model()
-        print([m.eval(ns[i]) for i in range(n)])
+        l = m.eval(l).as_long()
+        r = m.eval(r).as_long()
+        print([xs[i] for i in range(l - 1, r + 2)])
     else:
         print("No solution")
 
 
-def wv():
+def wv(xs):
     """
     In a list, a “valley” is a segment in which all the elements are at most equal to the ends (the “walls”). Find a
     longest valley. For example, the longest valley in the list [3, 2, 1, 2, 3, 2, 1, 2] is [3, 2, 1, 2, 3]
     """
-    pass
+    n = len(xs)
+    s = Optimize()
+    l, r = Ints("l r")
+
+    basics = [0 <= l, l < r, r < n]
+    main = [Implies(And(l <= i, r >= i), Or(xs[i] < xs[i + 1], xs[i] < xs[i - 1])) for i in range(n - 1)]
+
+    s.add(basics)
+    s.add(main)
+
+    s.maximize(r - l)
+
+    if s.check() == sat:
+        m = s.model()
+        l = m.eval(l).as_long()
+        r = m.eval(r).as_long()
+        print([xs[i] for i in range(l - 1 if l - 1 > 0 else 0, r + 2 if r + 2 < n else n)])
+    else:
+        print("No solution")
 
 
 # zerosum([-7, 7, -3, -2, -3, 9000, 5, 8])
 # kn([1, 2, 3], [1, 3, 5], 8)
 # mss([0, -2, 5, 5, -7, 2])
 # sort([9, 8, 2, 3, 5, 6, 12, 9, 9])
-wp([1, 2, 4, 3, 1, 3])
+# wp([2, 1, 2, 4, 3, 1, 3])
+# wv([1, 2, 4, 3, 1, 3])
